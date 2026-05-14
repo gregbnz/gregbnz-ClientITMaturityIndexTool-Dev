@@ -646,7 +646,7 @@ input[type="range"]::-moz-range-thumb { width:22px; height:22px; border-radius:5
 <!-- ═══ PERSISTENT TOP BAR ═══ -->
 <div id="topbar" style="display:none">
   <div class="topbar-inner">
-    <span class="topbar-logo" style="display:inline-flex;align-items:center;gap:8px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)"></span>IT Maturity Assessment <span style="color:var(--text3);font-weight:400;margin-left:6px">v0.31</span></span>
+    <span class="topbar-logo" style="display:inline-flex;align-items:center;gap:8px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)"></span>IT Maturity Assessment <span style="color:var(--text3);font-weight:400;margin-left:6px">v0.32</span></span>
     <span class="topbar-meta" id="topbar-meta"></span>
     <div class="prog-wrap">
       <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
@@ -660,7 +660,7 @@ input[type="range"]::-moz-range-thumb { width:22px; height:22px; border-radius:5
   <!-- ═══ INTRO ═══ -->
   <div id="screen-intro" class="screen active">
     <div class="hero" style="text-align:center">
-      <h1>IT Maturity<br><span style="color:var(--accent)">Assessment</span> <span style="color:var(--text3);font-size:0.4em;font-weight:400;vertical-align:middle">v0.31</span></h1>
+      <h1>IT Maturity<br><span style="color:var(--accent)">Assessment</span> <span style="color:var(--text3);font-size:0.4em;font-weight:400;vertical-align:middle">v0.32</span></h1>
       <p class="tagline" style="font-size:16px;line-height:1.55;color:var(--text);margin:0 auto 10px;font-weight:500;max-width:680px">Most assessments give you a score. This one gives you a prioritised plan &mdash; benchmarked against your industry, with tailored next steps for every gap.</p>
     </div>
     <div class="stats-grid">
@@ -820,6 +820,16 @@ var AREA_SUMMARIES = {};
 var RECS = [];
 
 var QUESTIONS = [];
+
+// Foundational boost: multiplicative weight bump applied only when a question is
+// tagged foundational AND the current IML is below 3. This pushes "minimum-bar"
+// gaps to the top of the priority list without nagging once they're already healthy.
+var FOUNDATIONAL_BOOST = 1.3;
+var FOUNDATIONAL_GATE_IML = 3;
+function effectiveWeight(w, f, iml) {
+  if (f && iml != null && iml < FOUNDATIONAL_GATE_IML) return w * FOUNDATIONAL_BOOST;
+  return w;
+}
 
 var AREAS = (function() {
   var seen = {}, out = [];
@@ -1023,7 +1033,11 @@ function closeInstructionsModal() {
 
 // Change log content for the landing-page modal.
 var CHANGELOG_HTML =
-  '<h2 style="margin-top:0">v0.31 &mdash; current</h2>' +
+  '<h2 style="margin-top:0">v0.32 &mdash; current</h2>' +
+  '<ul>' +
+    '<li>Foundational tag now affects recommendation priority.</li>' +
+  '</ul>' +
+  '<h2>v0.31</h2>' +
   '<ul>' +
     '<li>Questions and recommendations moved into a separate data file for performance and structuring.</li>' +
   '</ul>' +
@@ -1296,7 +1310,7 @@ function showResults() {
   });
 
   var priorityList = QUESTIONS.map(function(q,i){
-    return { idx:i, q:q.q, area:q.area, trait:q.trait, iml:answers[i], w:q.w, f:!!q.f, fr:q.fr||'', score:q.w*(6-answers[i]) };
+    return { idx:i, q:q.q, area:q.area, trait:q.trait, iml:answers[i], w:q.w, f:!!q.f, fr:q.fr||'', score:effectiveWeight(q.w, q.f, answers[i])*(6-answers[i]) };
   }).sort(function(a,b){
     if (b.score !== a.score) return b.score - a.score;
     if (b.w !== a.w) return b.w - a.w;
@@ -1520,7 +1534,7 @@ function buildPriorityList() {
     return {
       idx: i, q: q.q, area: q.area, trait: q.trait, f: q.f, fr: q.fr || '', w: q.w,
       iml: answers[i], comments: comments[i] || '',
-      score: (5 - answers[i]) * q.w
+      score: (5 - answers[i]) * effectiveWeight(q.w, q.f, answers[i])
     };
   }).sort(function(a,b){
     if (b.score !== a.score) return b.score - a.score;
@@ -1888,7 +1902,7 @@ function exportXLSX() {
       iml: answered ? a : null,
       w:q.w, f:!!q.f, fr:q.fr||'',
       answered: answered,
-      score: answered ? (q.w * (6 - a)) : -1,
+      score: answered ? (effectiveWeight(q.w, q.f, a) * (6 - a)) : -1,
       comments: comments[i] || ''
     };
   }).sort(function(a,b){
