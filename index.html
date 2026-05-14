@@ -144,6 +144,25 @@ body { font-family:'DM Sans',system-ui,sans-serif; background:var(--bg); backgro
 .pq-weight strong { color:#F4EFE6; font-weight:500; }
 .pq-foundational { display:inline-block; padding:2px 8px; background:#B97A2E; color:#ffffff; border-radius:99px; font-size:9px; font-weight:500; letter-spacing:0.04em; margin-left:6px; }
 
+/* Foundational tooltip */
+.q-foundational[data-tip], .pq-foundational[data-tip] { position:relative; cursor:help; }
+.q-foundational[data-tip]:hover::after, .pq-foundational[data-tip]:hover::after,
+.q-foundational[data-tip]:focus::after, .pq-foundational[data-tip]:focus::after {
+  content: attr(data-tip);
+  position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%);
+  background:#1F1F23; color:#F4EFE6; padding:9px 11px; border-radius:6px;
+  font-size:11px; font-weight:400; letter-spacing:0; text-transform:none;
+  width:300px; max-width:80vw; white-space:normal; text-align:left; line-height:1.45;
+  box-shadow:0 6px 18px rgba(0,0,0,0.55); border:0.5px solid var(--bdr);
+  z-index:9999; pointer-events:none;
+}
+.q-foundational[data-tip]:hover::before, .pq-foundational[data-tip]:hover::before {
+  content:""; position:absolute; bottom:calc(100% + 2px); left:50%; transform:translateX(-50%);
+  border:5px solid transparent; border-top-color:#1F1F23; z-index:9999; pointer-events:none;
+}
+/* Ensure tooltip isn't clipped by table cells */
+.priority-row td { overflow:visible; }
+
 /* Expandable priority rows */
 .priority-row { cursor:pointer; }
 .priority-row:hover td { background:var(--bg2); }
@@ -627,7 +646,7 @@ input[type="range"]::-moz-range-thumb { width:22px; height:22px; border-radius:5
 <!-- ═══ PERSISTENT TOP BAR ═══ -->
 <div id="topbar" style="display:none">
   <div class="topbar-inner">
-    <span class="topbar-logo" style="display:inline-flex;align-items:center;gap:8px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)"></span>IT Maturity Assessment <span style="color:var(--text3);font-weight:400;margin-left:6px">v0.3</span></span>
+    <span class="topbar-logo" style="display:inline-flex;align-items:center;gap:8px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)"></span>IT Maturity Assessment <span style="color:var(--text3);font-weight:400;margin-left:6px">v0.31</span></span>
     <span class="topbar-meta" id="topbar-meta"></span>
     <div class="prog-wrap">
       <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
@@ -641,7 +660,7 @@ input[type="range"]::-moz-range-thumb { width:22px; height:22px; border-radius:5
   <!-- ═══ INTRO ═══ -->
   <div id="screen-intro" class="screen active">
     <div class="hero" style="text-align:center">
-      <h1>IT Maturity<br><span style="color:var(--accent)">Assessment</span> <span style="color:var(--text3);font-size:0.4em;font-weight:400;vertical-align:middle">v0.3</span></h1>
+      <h1>IT Maturity<br><span style="color:var(--accent)">Assessment</span> <span style="color:var(--text3);font-size:0.4em;font-weight:400;vertical-align:middle">v0.31</span></h1>
       <p class="tagline" style="font-size:16px;line-height:1.55;color:var(--text);margin:0 auto 10px;font-weight:500;max-width:680px">Most assessments give you a score. This one gives you a prioritised plan &mdash; benchmarked against your industry, with tailored next steps for every gap.</p>
     </div>
     <div class="stats-grid">
@@ -1004,7 +1023,11 @@ function closeInstructionsModal() {
 
 // Change log content for the landing-page modal.
 var CHANGELOG_HTML =
-  '<h2 style="margin-top:0">v0.3 &mdash; current</h2>' +
+  '<h2 style="margin-top:0">v0.31 &mdash; current</h2>' +
+  '<ul>' +
+    '<li>Questions and recommendations moved into a separate data file for performance and structuring.</li>' +
+  '</ul>' +
+  '<h2>v0.3</h2>' +
   '<ul>' +
     '<li>On-page tooltips explaining IML and the assessment structure.</li>' +
     '<li>In-app feedback widget for sending requests and feedback.</li>' +
@@ -1273,7 +1296,7 @@ function showResults() {
   });
 
   var priorityList = QUESTIONS.map(function(q,i){
-    return { idx:i, q:q.q, area:q.area, trait:q.trait, iml:answers[i], w:q.w, f:!!q.f, score:q.w*(6-answers[i]) };
+    return { idx:i, q:q.q, area:q.area, trait:q.trait, iml:answers[i], w:q.w, f:!!q.f, fr:q.fr||'', score:q.w*(6-answers[i]) };
   }).sort(function(a,b){
     if (b.score !== a.score) return b.score - a.score;
     if (b.w !== a.w) return b.w - a.w;
@@ -1347,7 +1370,7 @@ function showResults() {
     }).join('');
     return '<tr class="priority-row" onclick="togglePriority('+rank+')" id="prow-'+rank+'">' +
       '<td style="color:var(--text3);width:56px;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:left"><span class="priority-caret">\u25B6</span> Q'+(p.idx+1)+'</td>' +
-      '<td style="text-align:left">'+escHtml(p.q)+(p.f?' <span class="q-foundational" style="font-size:9px;padding:1px 7px;margin-left:4px;vertical-align:middle">Foundational</span>':'')+'</td>' +
+      '<td style="text-align:left">'+escHtml(p.q)+(p.f?' <span class="q-foundational" data-tip="'+escAttr(p.fr||'Foundational capability — strongly recommended to address before more advanced work.')+'" tabindex="0" style="font-size:9px;padding:1px 7px;margin-left:4px;vertical-align:middle">Foundational</span>':'')+'</td>' +
       '<td style="color:var(--text3);white-space:nowrap;text-align:left;padding-right:10px">'+escHtml(AREA_SHORT[p.area]||p.area)+'</td>' +
       '<td style="text-align:left;font-variant-numeric:tabular-nums">'+p.iml+'</td>' +
       '<td style="text-align:left;padding-left:28px;font-variant-numeric:tabular-nums">'+p.w.toFixed(1)+'</td>' +
@@ -1495,7 +1518,7 @@ var _recsPriorityList = []; // populated when modal opens
 function buildPriorityList() {
   return QUESTIONS.map(function(q,i){
     return {
-      idx: i, q: q.q, area: q.area, trait: q.trait, f: q.f, w: q.w,
+      idx: i, q: q.q, area: q.area, trait: q.trait, f: q.f, fr: q.fr || '', w: q.w,
       iml: answers[i], comments: comments[i] || '',
       score: (5 - answers[i]) * q.w
     };
@@ -1511,7 +1534,7 @@ function openRecsExportModal() {
   var listEl = document.getElementById('recs-modal-list');
   var html = '';
   _recsPriorityList.forEach(function(p, rank){
-    var checked = rank < 5 ? ' checked' : '';
+    var checked = rank < 10 ? ' checked' : '';
     html += '<label>' +
       '<input type="checkbox" data-rank="'+rank+'"'+checked+' onchange="updateRecsModalCount()">' +
       '<span class="ml-rank">#'+(rank+1)+'</span>' +
@@ -1581,7 +1604,7 @@ function renderRecsPdf(selectedRanks) {
     html += '<div class="pr-q">' +
       '<div class="pr-q-hd">' +
         '<div class="pr-q-text">' +
-          '<div class="pr-q-num">Priority #'+(rank+1)+(p.f?' · Foundational':'')+'</div>' +
+          '<div class="pr-q-num">Priority #'+(rank+1)+(p.f?' · <span class="pq-foundational" data-tip="'+escAttr(p.fr||'Foundational capability — strongly recommended to address before more advanced work.')+'" tabindex="0" style="margin-left:4px">Foundational</span>':'')+'</div>' +
           '<div class="pr-q-q">'+escHtml(p.q)+'</div>' +
         '</div>' +
         '<div class="pr-q-iml"><div class="pr-q-iml-num">'+p.iml+'</div><div class="pr-q-iml-lbl">'+IML_LABELS[p.iml-1]+'</div></div>' +
@@ -1863,7 +1886,7 @@ function exportXLSX() {
     return {
       idx:i, q:q.q, area:q.area, trait:q.trait,
       iml: answered ? a : null,
-      w:q.w, f:!!q.f,
+      w:q.w, f:!!q.f, fr:q.fr||'',
       answered: answered,
       score: answered ? (q.w * (6 - a)) : -1,
       comments: comments[i] || ''
@@ -1928,6 +1951,7 @@ function exportXLSX() {
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+function escAttr(s) { return escHtml(s); }
 
 // ═══ BOOTSTRAP: load questions, answers and recommendations from data.json ═══
 // The bulk of the assessment content (questions, the 5 ratings per question,
@@ -2007,7 +2031,7 @@ function setAssessmentDataLoading(isLoading, errorMessage) {
   <div class="modal-overlay" onclick="closeRecsExportModal()"></div>
   <div class="modal-card recs-modal-card" role="dialog" aria-labelledby="recs-export-title">
     <h3 id="recs-export-title">Export recommendations</h3>
-    <p class="modal-sub">Select the questions you want recommendations for. Listed in priority order — top 5 are pre-selected.</p>
+    <p class="modal-sub">Select the questions you want recommendations for. Listed in priority order — top 10 are pre-selected.</p>
     <div class="recs-modal-actions-top">
       <button type="button" onclick="recsModalSelect('top5')">Top 5</button>
       <button type="button" onclick="recsModalSelect('top10')">Top 10</button>
